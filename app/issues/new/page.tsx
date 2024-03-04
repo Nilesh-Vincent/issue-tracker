@@ -2,7 +2,7 @@
 
 import { Button, Callout, TextField, Text } from "@radix-ui/themes";
 import SimpleMDE from "react-simplemde-editor";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, set } from "react-hook-form";
 import "easymde/dist/easymde.min.css";
 import axios from "axios";
 import { useRouter } from "next/navigation";
@@ -10,7 +10,8 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createIssueSchema } from "@/app/validationSchemas";
 import { z } from "zod";
-import ErrorMessage from "@/app/components/errorMessage";
+import ErrorMessage from "@/app/components/ErrorMessage";
+import Spinner from "@/app/components/Spinner";
 
 type IssueForm = z.infer<typeof createIssueSchema>;
 
@@ -27,6 +28,18 @@ const NewIssuePage = () => {
   });
 
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const onSubmitHandler = handleSubmit(async (data) => {
+    try {
+      setIsSubmitting(true);
+      await axios.post("/api/issues", data);
+      router.push("/issues");
+    } catch (error) {
+      setError("An unexpected error has occured");
+      setIsSubmitting(false);
+    }
+  });
 
   return (
     <div className='max-w-xl '>
@@ -36,17 +49,7 @@ const NewIssuePage = () => {
         </Callout.Root>
       )}
 
-      <form
-        className='max-w-xl space-y-3'
-        onSubmit={handleSubmit(async (data) => {
-          try {
-            await axios.post("/api/issues", data);
-            router.push("/issues");
-          } catch (error) {
-            setError("An unexpected error has occured");
-          }
-        })}
-      >
+      <form className='max-w-xl space-y-3' onSubmit={onSubmitHandler}>
         <TextField.Root>
           <TextField.Input placeholder='Title' {...register("title")} />
         </TextField.Root>
@@ -59,7 +62,10 @@ const NewIssuePage = () => {
           )}
         />
         <ErrorMessage>{errors.description?.message}</ErrorMessage>
-        <Button>Submit New Issue</Button>
+        <Button disabled={isSubmitting}>
+          Submit New Issue
+          {isSubmitting && <Spinner />}
+        </Button>
       </form>
     </div>
   );
